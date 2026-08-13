@@ -49,13 +49,7 @@ func getConnStr() string {
 	dbPass := getEnv("MYSQLPASSWORD", getEnv("MYSQL_PASSWORD", getEnv("DB_PASSWORD", "")))
 	dbHost := getEnv("MYSQLHOST", getEnv("MYSQL_HOST", getEnv("DB_HOST", "127.0.0.1")))
 	dbPort := getEnv("MYSQLPORT", getEnv("MYSQL_PORT", getEnv("DB_PORT", "3306")))
-
-	// Jika berjalan di Railway, default nama DB di Railway adalah 'railway'
-	defaultDB := "toko_bangunan"
-	if os.Getenv("MYSQLHOST") != "" || os.Getenv("MYSQL_HOST") != "" || os.Getenv("RAILWAY_ENVIRONMENT") != "" {
-		defaultDB = "railway"
-	}
-	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", defaultDB)))
+	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", "toko_bangunan")))
 
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
 }
@@ -138,10 +132,10 @@ func main() {
 	// 2. READ BY ID (Mendapatkan 1 produk berdasarkan ID)
 	mux.HandleFunc("GET /products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		
+
 		var p Product
 		err := db.QueryRow("SELECT id, name, price FROM products WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.Price)
-		
+
 		if err == sql.ErrNoRows {
 			http.Error(w, "Produk tidak ditemukan", http.StatusNotFound)
 			return
@@ -226,7 +220,7 @@ func main() {
 	mux.HandleFunc("PUT /products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 		var p Product
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 			http.Error(w, "Format request salah", http.StatusBadRequest)
 			return
@@ -252,7 +246,7 @@ func main() {
 	// 5. DELETE (Menghapus produk)
 	mux.HandleFunc("DELETE /products/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
-		
+
 		res, err := db.Exec("DELETE FROM products WHERE id = ?", id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
