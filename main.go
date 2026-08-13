@@ -6,11 +6,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	// Driver MySQL
 	_ "github.com/go-sql-driver/mysql"
 )
+
+// Helper untuk membaca Environment Variable dengan nilai default (fallback)
+func getEnv(key, fallback string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return fallback
+}
 
 // Struktur Data Produk
 type Product struct {
@@ -23,10 +32,16 @@ var db *sql.DB
 
 func main() {
 	var err error
-	
-	// Konfigurasi Koneksi MySQL (Format: user:password@tcp(host:port)/dbname)
-	connStr := "root:@tcp(127.0.0.1:3306)/toko_bangunan"
-	
+
+	// Konfigurasi Koneksi MySQL (Otomatis menyesuaikan Railway.app / Environment Variables / Localhost Laragon)
+	dbUser := getEnv("MYSQLUSER", getEnv("DB_USER", "root"))
+	dbPass := getEnv("MYSQLPASSWORD", getEnv("DB_PASSWORD", ""))
+	dbHost := getEnv("MYSQLHOST", getEnv("DB_HOST", "127.0.0.1"))
+	dbPort := getEnv("MYSQLPORT", getEnv("DB_PORT", "3306"))
+	dbName := getEnv("MYSQLDATABASE", getEnv("DB_NAME", "toko_bangunan"))
+
+	connStr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+
 	// Buka Koneksi
 	db, err = sql.Open("mysql", connStr)
 	if err != nil {
@@ -202,7 +217,8 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Jalankan Server
-	fmt.Println("Server API berjalan di http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	// Jalankan Server (Mendukung port dinamis dari Railway/Heroku atau default 8080)
+	port := getEnv("PORT", "8080")
+	fmt.Printf("Server API berjalan di port %s\n", port)
+	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
