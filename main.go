@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	// Driver MySQL
 	_ "github.com/go-sql-driver/mysql"
@@ -19,6 +20,38 @@ func getEnv(key, fallback string) string {
 		return val
 	}
 	return fallback
+}
+
+// Helper untuk membuat DSN MySQL (Mendukung MYSQL_URL, DATABASE_URL, dan variabel terpisah)
+func getConnStr() string {
+	rawURL := os.Getenv("MYSQL_URL")
+	if rawURL == "" {
+		rawURL = os.Getenv("DATABASE_URL")
+	}
+
+	if rawURL != "" {
+		u := strings.TrimPrefix(rawURL, "mysql://")
+		u = strings.TrimPrefix(u, "mysql2://")
+		lastAt := strings.LastIndex(u, "@")
+		if lastAt != -1 {
+			userPass := u[:lastAt]
+			hostPortDb := u[lastAt+1:]
+			slashIdx := strings.Index(hostPortDb, "/")
+			if slashIdx != -1 {
+				hostPort := hostPortDb[:slashIdx]
+				dbName := hostPortDb[slashIdx+1:]
+				return fmt.Sprintf("%s@tcp(%s)/%s?parseTime=true", userPass, hostPort, dbName)
+			}
+		}
+	}
+
+	dbUser := getEnv("MYSQLUSER", getEnv("MYSQL_USER", getEnv("DB_USER", "root")))
+	dbPass := getEnv("MYSQLPASSWORD", getEnv("MYSQL_PASSWORD", getEnv("DB_PASSWORD", "")))
+	dbHost := getEnv("MYSQLHOST", getEnv("MYSQL_HOST", getEnv("DB_HOST", "127.0.0.1")))
+	dbPort := getEnv("MYSQLPORT", getEnv("MYSQL_PORT", getEnv("DB_PORT", "3306")))
+	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", "toko_bangunan")))
+
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
 }
 
 // Struktur Data Produk
@@ -33,27 +66,21 @@ var db *sql.DB
 func main() {
 	var err error
 
-	// Konfigurasi Koneksi MySQL (Otomatis menyesuaikan Railway.app / Environment Variables / Localhost Laragon)
-	dbUser := getEnv("MYSQLUSER", getEnv("DB_USER", "root"))
-	dbPass := getEnv("MYSQLPASSWORD", getEnv("DB_PASSWORD", ""))
-	dbHost := getEnv("MYSQLHOST", getEnv("DB_HOST", "127.0.0.1"))
-	dbPort := getEnv("MYSQLPORT", getEnv("DB_PORT", "3306"))
-	dbName := getEnv("MYSQLDATABASE", getEnv("DB_NAME", "toko_bangunan"))
-
-	connStr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+	connStr := getConnStr()
+	log.Println("Menggunakan string koneksi DB:", connStr)
 
 	// Buka Koneksi
 	db, err = sql.Open("mysql", connStr)
 	if err != nil {
-		log.Fatal("Gagal membuka database:", err)
+		log.Println("Gagal sql.Open:", err)
+	} else {
+		defer db.Close()
+		if err = db.Ping(); err != nil {
+			log.Println("Warning: Belum dapat terhubung ke MySQL:", err)
+		} else {
+			fmt.Println("Berhasil terhubung ke database MySQL!")
+		}
 	}
-	defer db.Close()
-
-	// Tes Koneksi
-	if err = db.Ping(); err != nil {
-		log.Fatal("Gagal terhubung ke MySQL. Pastikan MySQL sudah menyala!", err)
-	}
-	fmt.Println("Berhasil terhubung ke database MySQL!")
 
 	// Inisialisasi Router (Fitur Go 1.22+)
 	mux := http.NewServeMux()
@@ -68,10 +95,15 @@ func main() {
 			http.NotFound(w, r)
 			return
 		}
+		dbStatus := "connected"
+		if db == nil || db.Ping() != nil {
+			dbStatus = "disconnected / checking..."
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{
-			"status":  "online",
-			"message": "REST API Golang is running on Railway!",
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":          "online",
+			"database_status": dbStatus,
+			"message":         "REST API Golang is running on Railway!",
 		})
 	})
 
