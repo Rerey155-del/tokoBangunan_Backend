@@ -62,6 +62,19 @@ func main() {
 	// ENDPOINT CRUD
 	// ----------------------------------------------------
 
+	// 0. HOME / HEALTH CHECK
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"status":  "online",
+			"message": "REST API Golang is running on Railway!",
+		})
+	})
+
 	// 1. READ ALL (Mendapatkan semua produk)
 	mux.HandleFunc("GET /products", func(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.Query("SELECT id, name, price FROM products")
