@@ -49,7 +49,13 @@ func getConnStr() string {
 	dbPass := getEnv("MYSQLPASSWORD", getEnv("MYSQL_PASSWORD", getEnv("DB_PASSWORD", "")))
 	dbHost := getEnv("MYSQLHOST", getEnv("MYSQL_HOST", getEnv("DB_HOST", "127.0.0.1")))
 	dbPort := getEnv("MYSQLPORT", getEnv("MYSQL_PORT", getEnv("DB_PORT", "3306")))
-	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", "toko_bangunan")))
+
+	// Jika berjalan di Railway, default nama DB di Railway adalah 'railway'
+	defaultDB := "toko_bangunan"
+	if os.Getenv("MYSQLHOST") != "" || os.Getenv("MYSQL_HOST") != "" || os.Getenv("RAILWAY_ENVIRONMENT") != "" {
+		defaultDB = "railway"
+	}
+	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", defaultDB)))
 
 	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
 }
