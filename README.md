@@ -110,15 +110,6 @@ go run main.go
 ```
 *Aplikasi akan otomatis terhubung ke MySQL local, membuat database `toko_bangunan` dan tabel `users` & `products`, lalu berjalan di `http://localhost:8080`.*
 
-## 🚀 Deployment ke Railway.app
-
-1. Push repository ini ke akun GitHub Anda.
-2. Login ke [Railway.app](https://railway.app/) dan buat **New Project**.
-3. Tambahkan service **MySQL** (Provision MySQL).
-4. Tambahkan service dari **GitHub Repo** ini.
-5. Hubungkan variabel MySQL ke service Golang (Variable Reference).
-6. Generate Domain Publik di bagian **Settings -> Networking**.
-
 ---
 
 ## 📄 Lisensi
