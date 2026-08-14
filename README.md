@@ -6,13 +6,13 @@ RESTful API berperforma tinggi yang dibangun menggunakan **Golang** (native `net
 
 ## ✨ Fitur Utama
 
-- 🚀 **Go 1.22+ Native Routing (`net/http` ServeMux)**: Memanfaatkan HTTP Method Matching (`GET /`, `POST /products`, `GET /products/{id}`).
-- 👤 **CRUD Users**: Registrasi, baca data, perbarui profil, dan hapus user.
-- 🛒 **CRUD Products**: Manajemen produk (Nama, Harga, `user_id`).
-- ⚡ **Bulk Insert Transaction (`POST /products/bulk`)**: Menggunakan **MySQL Transaction** (`db.Begin`, `tx.Commit`, `tx.Rollback`) untuk penginputan data massal secara *atomic*.
-- 🛠️ **Auto Database & Table Creation**: Otomatis membuat database `toko_bangunan` dan tabel `users` & `products` saat pertama kali dijalankan.
-- 🌐 **Cross-Environment Ready**: Kompatibel secara otomatis di lingkungan **Localhost (Laragon)** maupun **Cloud Deployment (Railway.app)**.
-- 💓 **Health Check Endpoint (`GET /`)**: Endpoint pemantau status aktif server & status koneksi database.
+- **Go 1.22+ Native Routing (`net/http` ServeMux)**: Memanfaatkan HTTP Method Matching (`GET /`, `POST /products`, `GET /products/{id}`).
+- **CRUD Users**: Registrasi, baca data, perbarui profil, dan hapus user.
+- **CRUD Products**: Manajemen produk (Nama, Harga, `user_id`).
+- **Bulk Insert Transaction (`POST /products/bulk`)**: Menggunakan **MySQL Transaction** (`db.Begin`, `tx.Commit`, `tx.Rollback`) untuk penginputan data massal secara *atomic*.
+- **Auto Database & Table Creation**: Otomatis membuat database `toko_bangunan` dan tabel `users` & `products` saat pertama kali dijalankan.
+- **Cross-Environment Ready**: Kompatibel secara otomatis di lingkungan **Localhost (Laragon)** maupun **Cloud Deployment (Railway.app)**.
+- **Health Check Endpoint (`GET /`)**: Endpoint pemantau status aktif server & status koneksi database.
 
 ---
 
