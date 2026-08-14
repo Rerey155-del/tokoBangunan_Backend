@@ -373,7 +373,7 @@ func main() {
 		}
 		defer tx.Rollback()
 
-		stmt, err := tx.Prepare("INSERT INTO products (name, price) VALUES (?, ?)")
+		stmt, err := tx.Prepare("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)")
 		if err != nil {
 			http.Error(w, "Gagal menyiapkan query: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -381,7 +381,7 @@ func main() {
 		defer stmt.Close()
 
 		for _, p := range products {
-			_, err := stmt.Exec(p.Name, p.Price)
+			_, err := stmt.Exec(p.Name, p.Price, p.UserID)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("Gagal menyimpan produk '%s': %s", p.Name, err.Error()), http.StatusInternalServerError)
 				return

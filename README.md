@@ -79,11 +79,13 @@ RESTful API berperforma tinggi yang dibangun menggunakan **Golang** (native `net
 [
   {
     "name": "Cat Tembok 5kg",
-    "price": 120000
+    "price": 120000,
+    "user_id": 1
   },
   {
     "name": "Paku Kayu 2 Inch",
-    "price": 20000
+    "price": 20000,
+    "user_id": 1
   }
 ]
 ```
