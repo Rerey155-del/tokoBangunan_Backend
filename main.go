@@ -22,12 +22,14 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// Helper untuk membuat DSN MySQL (Mendukung MYSQL_URL, DATABASE_URL, dan variabel terpisah)
-func getConnStr() string {
+// Inisialisasi Koneksi DB: Otomatis buat Database & Tabel jika belum ada
+func initDBConnection() (*sql.DB, error) {
 	rawURL := os.Getenv("MYSQL_URL")
 	if rawURL == "" {
 		rawURL = os.Getenv("DATABASE_URL")
 	}
+
+	var dbUser, dbPass, dbHost, dbPort, dbName string
 
 	if rawURL != "" {
 		u := strings.TrimPrefix(rawURL, "mysql://")
@@ -39,19 +41,56 @@ func getConnStr() string {
 			slashIdx := strings.Index(hostPortDb, "/")
 			if slashIdx != -1 {
 				hostPort := hostPortDb[:slashIdx]
-				dbName := hostPortDb[slashIdx+1:]
-				return fmt.Sprintf("%s@tcp(%s)/%s?parseTime=true", userPass, hostPort, dbName)
+				dbName = hostPortDb[slashIdx+1:]
+
+				colonIdx := strings.Index(userPass, ":")
+				if colonIdx != -1 {
+					dbUser = userPass[:colonIdx]
+					dbPass = userPass[colonIdx+1:]
+				} else {
+					dbUser = userPass
+				}
+
+				colonHostIdx := strings.Index(hostPort, ":")
+				if colonHostIdx != -1 {
+					dbHost = hostPort[:colonHostIdx]
+					dbPort = hostPort[colonHostIdx+1:]
+				} else {
+					dbHost = hostPort
+					dbPort = "3306"
+				}
 			}
 		}
 	}
 
-	dbUser := getEnv("MYSQLUSER", getEnv("MYSQL_USER", getEnv("DB_USER", "root")))
-	dbPass := getEnv("MYSQLPASSWORD", getEnv("MYSQL_PASSWORD", getEnv("DB_PASSWORD", "")))
-	dbHost := getEnv("MYSQLHOST", getEnv("MYSQL_HOST", getEnv("DB_HOST", "127.0.0.1")))
-	dbPort := getEnv("MYSQLPORT", getEnv("MYSQL_PORT", getEnv("DB_PORT", "3306")))
-	dbName := getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", "toko_bangunan")))
+	if dbUser == "" {
+		dbUser = getEnv("MYSQLUSER", getEnv("MYSQL_USER", getEnv("DB_USER", "root")))
+		dbPass = getEnv("MYSQLPASSWORD", getEnv("MYSQL_PASSWORD", getEnv("DB_PASSWORD", "")))
+		dbHost = getEnv("MYSQLHOST", getEnv("MYSQL_HOST", getEnv("DB_HOST", "127.0.0.1")))
+		dbPort = getEnv("MYSQLPORT", getEnv("MYSQL_PORT", getEnv("DB_PORT", "3306")))
+		dbName = getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", getEnv("DB_NAME", "toko_bangunan")))
+	}
 
-	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+	if dbName == "" {
+		dbName = "toko_bangunan"
+	}
+
+	// 1. Hubungi Server MySQL tanpa DB Name untuk otomatis membuat database jika belum ada
+	serverDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/?parseTime=true", dbUser, dbPass, dbHost, dbPort)
+	log.Println("Memeriksa Server MySQL di:", dbHost+":"+dbPort)
+
+	if serverDB, err := sql.Open("mysql", serverDSN); err == nil {
+		if _, errCreate := serverDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s`;", dbName)); errCreate != nil {
+			log.Println("Warning: Gagal mengeksekusi CREATE DATABASE:", errCreate)
+		} else {
+			log.Printf("Database '%s' dipastikan siap di server MySQL.", dbName)
+		}
+		serverDB.Close()
+	}
+
+	// 2. Hubungkan ke database target
+	targetDSN := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+	return sql.Open("mysql", targetDSN)
 }
 
 // Struktur Data Produk
@@ -66,11 +105,8 @@ var db *sql.DB
 func main() {
 	var err error
 
-	connStr := getConnStr()
-	log.Println("Menggunakan string koneksi DB:", connStr)
-
-	// Buka Koneksi
-	db, err = sql.Open("mysql", connStr)
+	// Buka Koneksi & Buat DB Otomatis
+	db, err = initDBConnection()
 	if err != nil {
 		log.Println("Gagal sql.Open:", err)
 	} else {
