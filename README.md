@@ -1,4 +1,4 @@
-# 📦 REST API Golang - Toko Bangunan
+# Toko Bangunan Backend Service
 
 RESTful API berperforma tinggi yang dibangun menggunakan **Golang** (native `net/http` Go 1.22+) dan **MySQL**. REST API ini mengelola data Pengguna (*Users*) dan Produk (*Products*) dengan dukungan relasi antar-tabel (*One-to-Many*), transaksi database (*Bulk Insert*), serta otomatisasi pembuatan database & tabel (*Auto-Migration*).
 
