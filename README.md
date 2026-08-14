@@ -108,24 +108,6 @@ go run main.go
 ```
 *Aplikasi akan otomatis terhubung ke MySQL local, membuat database `toko_bangunan` dan tabel `users` & `products`, lalu berjalan di `http://localhost:8080`.*
 
----
-
-## 🌍 Environment Variables (Cloud / Railway)
-
-Aplikasi secara otomatis membaca variabel lingkungan berikut jika tersedia di server cloud (seperti Railway):
-
-| Variable | Deskripsi | Default (Local) |
-| :--- | :--- | :--- |
-| `MYSQLHOST` | Host server MySQL | `127.0.0.1` |
-| `MYSQLPORT` | Port server MySQL | `3306` |
-| `MYSQLUSER` | Username MySQL | `root` |
-| `MYSQLPASSWORD` | Password MySQL | `""` |
-| `MYSQLDATABASE` | Nama Database | `toko_bangunan` |
-| `MYSQL_URL` | URL koneksi lengkap MySQL | *(Opsional)* |
-| `PORT` | Port server HTTP | `8080` |
-
----
-
 ## 🚀 Deployment ke Railway.app
 
 1. Push repository ini ke akun GitHub Anda.
