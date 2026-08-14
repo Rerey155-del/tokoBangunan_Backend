@@ -156,6 +156,10 @@ func main() {
 			// Pastikan kolom id bertipe AUTO_INCREMENT di tabel users & products
 			db.Exec("ALTER TABLE users MODIFY id INT AUTO_INCREMENT;")
 			db.Exec("ALTER TABLE products MODIFY id INT AUTO_INCREMENT;")
+
+			// Pastikan nama kolom user_id konsisten huruf kecil (jika di MySQL sebelumnya terlanjur bernama UserID)
+			db.Exec("ALTER TABLE products RENAME COLUMN UserID TO user_id;")
+			db.Exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS user_id INT;")
 		}
 	}
 
@@ -289,7 +293,7 @@ func main() {
 
 	// 1. READ ALL (Mendapatkan semua produk)
 	mux.HandleFunc("GET /products", func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id, name, price FROM products")
+		rows, err := db.Query("SELECT id, name, price, COALESCE(user_id, 0) FROM products")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -299,7 +303,7 @@ func main() {
 		var products []Product
 		for rows.Next() {
 			var p Product
-			if err := rows.Scan(&p.ID, &p.Name, &p.Price); err != nil {
+			if err := rows.Scan(&p.ID, &p.Name, &p.Price, &p.UserID); err != nil {
 				continue
 			}
 			products = append(products, p)
@@ -314,7 +318,7 @@ func main() {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 
 		var p Product
-		err := db.QueryRow("SELECT id, name, price FROM products WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.Price)
+		err := db.QueryRow("SELECT id, name, price, COALESCE(user_id, 0) FROM products WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.Price, &p.UserID)
 
 		if err == sql.ErrNoRows {
 			http.Error(w, "Produk tidak ditemukan", http.StatusNotFound)
@@ -336,7 +340,14 @@ func main() {
 			return
 		}
 
-		res, err := db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
+		var res sql.Result
+		var err error
+		if p.UserID > 0 {
+			res, err = db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
+		} else {
+			res, err = db.Exec("INSERT INTO products (name, price) VALUES (?, ?)", p.Name, p.Price)
+		}
+
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
