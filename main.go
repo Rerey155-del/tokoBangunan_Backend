@@ -150,7 +150,7 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":          "online",
 			"database_status": dbStatus,
-			"message":         "REST API Golang is running on Railway!",
+			"message":         "API is running on Railway!",
 		})
 	})
 
