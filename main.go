@@ -157,9 +157,7 @@ func main() {
 			db.Exec("ALTER TABLE users MODIFY id INT AUTO_INCREMENT;")
 			db.Exec("ALTER TABLE products MODIFY id INT AUTO_INCREMENT;")
 
-			// Pastikan nama kolom user_id konsisten huruf kecil (jika di MySQL sebelumnya terlanjur bernama UserID)
-			db.Exec("ALTER TABLE products RENAME COLUMN UserID TO user_id;")
-			db.Exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS user_id INT;")
+		
 		}
 	}
 
