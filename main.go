@@ -152,6 +152,10 @@ func main() {
 			} else {
 				log.Println("Tabel 'products' terverifikasi & siap digunakan.")
 			}
+
+			// Pastikan kolom id bertipe AUTO_INCREMENT di tabel users & products
+			db.Exec("ALTER TABLE users MODIFY id INT AUTO_INCREMENT;")
+			db.Exec("ALTER TABLE products MODIFY id INT AUTO_INCREMENT;")
 		}
 	}
 
