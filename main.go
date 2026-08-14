@@ -103,10 +103,10 @@ type Product struct {
 
 //  Struktur Data Users
 type User struct {
-	ID  int `json:"id"`
-	Name string `json:"name"`
-	Email string `json:"email"`
-	Password string `json:"password, omiempty"`
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password,omitempty"`
 }
 
 var db *sql.DB
@@ -123,14 +123,31 @@ func main() {
 			log.Println("Warning: Belum dapat terhubung ke MySQL:", err)
 		} else {
 			fmt.Println("Berhasil terhubung ke database MySQL!")
-			// Otomatis buat tabel products jika belum ada di database
-			createTableQuery := `
+
+			// Otomatis buat tabel users jika belum ada
+			createUsersTable := `
+			CREATE TABLE IF NOT EXISTS users (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				email VARCHAR(255) NOT NULL UNIQUE,
+				password VARCHAR(255) NOT NULL
+			);`
+			if _, errUsers := db.Exec(createUsersTable); errUsers != nil {
+				log.Println("Warning: Gagal membuat tabel users:", errUsers)
+			} else {
+				log.Println("Tabel 'users' terverifikasi & siap digunakan.")
+			}
+
+			// Otomatis buat tabel products dengan relasi user_id jika belum ada
+			createProductsTable := `
 			CREATE TABLE IF NOT EXISTS products (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				name VARCHAR(255) NOT NULL,
-				price DOUBLE NOT NULL
+				price DOUBLE NOT NULL,
+				user_id INT,
+				FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 			);`
-			if _, errTable := db.Exec(createTableQuery); errTable != nil {
+			if _, errTable := db.Exec(createProductsTable); errTable != nil {
 				log.Println("Warning: Gagal membuat tabel products:", errTable)
 			} else {
 				log.Println("Tabel 'products' terverifikasi & siap digunakan.")
@@ -163,16 +180,15 @@ func main() {
 		})
 	})
 
-	//  Bikin data users
-
+	// Bikin data users
 	mux.HandleFunc("POST /users", func(w http.ResponseWriter, r *http.Request) {
 		var u User
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-			http.Error(w, "format Request User Salah", http.StatusBadRequest)
+			http.Error(w, "Format request user salah", http.StatusBadRequest)
 			return
 		}
 
-		res, err := db.Exec("INSERT INTO user (name, email, password)", u.Name, u.Email, u.Password)
+		res, err := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", u.Name, u.Email, u.Password)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -182,14 +198,13 @@ func main() {
 		u.ID = int(lastId)
 		u.Password = ""
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(u)
 		w.WriteHeader(http.StatusCreated)
-
+		json.NewEncoder(w).Encode(u)
 	})
 
 	// Read all users
 	mux.HandleFunc("GET /users", func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id name, email FROM users")
+		rows, err := db.Query("SELECT id, name, email FROM users")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -208,7 +223,7 @@ func main() {
 		json.NewEncoder(w).Encode(users)
 	})
 
-	// Read User berdasarkan ID + Produk miliknya
+	// Read User berdasarkan ID
 	mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 
@@ -227,15 +242,15 @@ func main() {
 		json.NewEncoder(w).Encode(u)
 	})
 
-	// update user (PUT/ users/{id})
+	// Update user (PUT /users/{id})
 	mux.HandleFunc("PUT /users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 		var u User
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-			http.Error(w, "", http.StatusBadRequest)
+			http.Error(w, "Format request salah", http.StatusBadRequest)
 			return
 		}
-		res, err := db.Exec("UPDATE users SET name = ? , email = ? WHERE id = ?", u.Name, u.Email, id)
+		res, err := db.Exec("UPDATE users SET name = ?, email = ? WHERE id = ?", u.Name, u.Email, id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -249,10 +264,9 @@ func main() {
 		u.Password = ""
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(u)
-
 	})
 
-	// Delete User (Delete/users/{id})
+	// Delete User (DELETE /users/{id})
 	mux.HandleFunc("DELETE /users/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 
