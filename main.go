@@ -332,7 +332,7 @@ func main() {
 			return
 		}
 
-		res, err := db.Exec("INSERT INTO products (name, price) VALUES (?, ?)", p.Name, p.Price)
+		res, err := db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
