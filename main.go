@@ -235,14 +235,14 @@ func main() {
 			http.Error(w, "", http.StatusBadRequest)
 			return
 		}
-		res, err := db.Exec("UPDATE users SET name = ? , email = ? WHERE id = ?", u.Name, u.Email,id)
+		res, err := db.Exec("UPDATE users SET name = ? , email = ? WHERE id = ?", u.Name, u.Email, id)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		rowsAffected,_ :=res.RowsAffected()
-		if rowsAffected ==0{
-			http.Error(w,"User tidak ditemukan",http.StatusNotFound)
+		rowsAffected, _ := res.RowsAffected()
+		if rowsAffected == 0 {
+			http.Error(w, "User tidak ditemukan", http.StatusNotFound)
 			return
 		}
 		u.ID = id
@@ -250,6 +250,23 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(u)
 
+	})
+
+	// Delete User (Delete/users/{id})
+	mux.HandleFunc("DELETE /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+
+		res, err := db.Exec("DELETE FROM users WHERE id = ?", id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		rowsAffected, _ := res.RowsAffected()
+		if rowsAffected == 0 {
+			http.Error(w, "User tidak ditemukan", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// 1. READ ALL (Mendapatkan semua produk)
@@ -301,7 +318,7 @@ func main() {
 			return
 		}
 
-		res, err := db.Exec("INSERT INTO products (name, price) VALUES (?, ?)", p.Name, p.Price)
+		res, err := db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
