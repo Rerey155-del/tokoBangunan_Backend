@@ -95,9 +95,18 @@ func initDBConnection() (*sql.DB, error) {
 
 // Struktur Data Produk
 type Product struct {
-	ID    int     `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	ID     int     `json:"id"`
+	Name   string  `json:"name"`
+	Price  float64 `json:"price"`
+	UserID int     `json:"user_id"`
+}
+
+// Struktur Data Users
+type User struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password,omitempty"`
 }
 
 var db *sql.DB
@@ -126,20 +135,6 @@ func main() {
 			} else {
 				log.Println("Tabel 'products' terverifikasi & siap digunakan.")
 			}
-
-			// ----------------------------------------------------
-			// TEMPLATE TABEL BARU (Tulis query SQL Anda di dalam backtick ``)
-			// ----------------------------------------------------
-			createNewTableQuery := `
-			-- Tulis syntax SQL CREATE TABLE IF NOT EXISTS nama_tabel Anda di sini
-			`
-			if query := strings.TrimSpace(createNewTableQuery); query != "" && !strings.HasPrefix(query, "--") {
-				if _, errNewTable := db.Exec(query); errNewTable != nil {
-					log.Println("Warning: Gagal membuat tabel baru:", errNewTable)
-				} else {
-					log.Println("Tabel baru terverifikasi & siap digunakan.")
-				}
-			}
 		}
 	}
 
@@ -166,6 +161,95 @@ func main() {
 			"database_status": dbStatus,
 			"message":         "API is running on Railway!",
 		})
+	})
+
+	//  Bikin data users
+
+	mux.HandleFunc("POST /users", func(w http.ResponseWriter, r *http.Request) {
+		var u User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, "format Request User Salah", http.StatusBadRequest)
+			return
+		}
+
+		res, err := db.Exec("INSERT INTO user (name, email, password)", u.Name, u.Email, u.Password)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		lastId, _ := res.LastInsertId()
+		u.ID = int(lastId)
+		u.Password = ""
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(u)
+		w.WriteHeader(http.StatusCreated)
+
+	})
+
+	// Read all users
+	mux.HandleFunc("GET /users", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := db.Query("SELECT id name, email FROM users")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var users []User
+		for rows.Next() {
+			var u User
+			if err := rows.Scan(&u.ID, &u.Name, &u.Email); err != nil {
+				continue
+			}
+			users = append(users, u)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(users)
+	})
+
+	// Read User berdasarkan ID + Produk miliknya
+	mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+
+		var u User
+		err := db.QueryRow("SELECT id, name, email FROM users WHERE id = ?", id).Scan(&u.ID, &u.Name, &u.Email)
+
+		if err == sql.ErrNoRows {
+			http.Error(w, "User tidak ditemukan", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(u)
+	})
+
+	// update user (PUT/ users/{id})
+	mux.HandleFunc("PUT /users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id, _ := strconv.Atoi(r.PathValue("id"))
+		var u User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, "", http.StatusBadRequest)
+			return
+		}
+		res, err := db.Exec("UPDATE users SET name = ? , email = ? WHERE id = ?", u.Name, u.Email,id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		rowsAffected,_ :=res.RowsAffected()
+		if rowsAffected ==0{
+			http.Error(w,"User tidak ditemukan",http.StatusNotFound)
+			return
+		}
+		u.ID = id
+		u.Password = ""
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(u)
+
 	})
 
 	// 1. READ ALL (Mendapatkan semua produk)
