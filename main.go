@@ -291,7 +291,7 @@ func main() {
 
 	// 1. READ ALL (Mendapatkan semua produk)
 	mux.HandleFunc("GET /products", func(w http.ResponseWriter, r *http.Request) {
-		rows, err := db.Query("SELECT id, name, price, COALESCE(user_id, 0) FROM products")
+		rows, err := db.Query("SELECT id, name, price, user_id FROM products")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -316,7 +316,7 @@ func main() {
 		id, _ := strconv.Atoi(r.PathValue("id"))
 
 		var p Product
-		err := db.QueryRow("SELECT id, name, price, COALESCE(user_id, 0) FROM products WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.Price, &p.UserID)
+		err := db.QueryRow("SELECT id, name, price, user_id FROM products WHERE id = ?", id).Scan(&p.ID, &p.Name, &p.Price, &p.UserID)
 
 		if err == sql.ErrNoRows {
 			http.Error(w, "Produk tidak ditemukan", http.StatusNotFound)
@@ -338,14 +338,7 @@ func main() {
 			return
 		}
 
-		var res sql.Result
-		var err error
-		if p.UserID > 0 {
-			res, err = db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
-		} else {
-			res, err = db.Exec("INSERT INTO products (name, price) VALUES (?, ?)", p.Name, p.Price)
-		}
-
+		res, err := db.Exec("INSERT INTO products (name, price, user_id) VALUES (?, ?, ?)", p.Name, p.Price, p.UserID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
