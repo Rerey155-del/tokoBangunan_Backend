@@ -126,6 +126,20 @@ func main() {
 			} else {
 				log.Println("Tabel 'products' terverifikasi & siap digunakan.")
 			}
+
+			// ----------------------------------------------------
+			// TEMPLATE TABEL BARU (Tulis query SQL Anda di dalam backtick ``)
+			// ----------------------------------------------------
+			createNewTableQuery := `
+			-- Tulis syntax SQL CREATE TABLE IF NOT EXISTS nama_tabel Anda di sini
+			`
+			if query := strings.TrimSpace(createNewTableQuery); query != "" && !strings.HasPrefix(query, "--") {
+				if _, errNewTable := db.Exec(query); errNewTable != nil {
+					log.Println("Warning: Gagal membuat tabel baru:", errNewTable)
+				} else {
+					log.Println("Tabel baru terverifikasi & siap digunakan.")
+				}
+			}
 		}
 	}
 
