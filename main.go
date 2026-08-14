@@ -74,11 +74,22 @@ func main() {
 	if err != nil {
 		log.Println("Gagal sql.Open:", err)
 	} else {
-		defer db.Close()
 		if err = db.Ping(); err != nil {
 			log.Println("Warning: Belum dapat terhubung ke MySQL:", err)
 		} else {
 			fmt.Println("Berhasil terhubung ke database MySQL!")
+			// Otomatis buat tabel products jika belum ada di database
+			createTableQuery := `
+			CREATE TABLE IF NOT EXISTS products (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				price DOUBLE NOT NULL
+			);`
+			if _, errTable := db.Exec(createTableQuery); errTable != nil {
+				log.Println("Warning: Gagal membuat tabel products:", errTable)
+			} else {
+				log.Println("Tabel 'products' terverifikasi & siap digunakan.")
+			}
 		}
 	}
 
